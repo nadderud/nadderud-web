@@ -24,6 +24,17 @@ JINJA_ENVIRONMENT = jinja2.Environment(
     autoescape=True)
 
 
+def request_setter(request, target, value_name, required, transform=None):
+    if isinstance(request.get(value_name), unicode):
+        value = request.get(value_name).strip()
+        if transform:
+            value = transform(value)
+        setattr(target, value_name, value)
+    if required and not getattr(target, value_name):
+        return {value_name: 'missing'}
+    return {}
+
+
 class MainPage(webapp2.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = 'text/plain'
@@ -35,23 +46,20 @@ class EventHandler(webapp2.RequestHandler):
         """Sets request variables to event."""
         errors = {}
 
-        if isinstance(self.request.POST.get('unit'), unicode):
-            event.unit = ndb.Key(urlsafe=self.request.POST.get('unit'))
-        if not event.unit:
-            errors['unit'] = 'missing'
+        errors.update(request_setter(self.request.POST, event, 'unit', True,
+                       lambda x: ndb.Key(urlsafe=x)))
 
-        for item in ['responsibility', 'remark']:
-            if isinstance(self.request.POST.get(item), unicode):
-                setattr(event, item, self.request.POST.get(item).strip())
+        for item, req in [
+            ('responsibility', False),
+            ('remark', False),
+            ('name', True),
+            ('location', True),
+        ]:
+            errors.update(request_setter(self.request.POST, event, item, req))
 
-        for item in ['name', 'location']:
-            if isinstance(self.request.POST.get(item), unicode):
-                setattr(event, item, self.request.POST.get(item).strip())
-            if not getattr(event, item):
-                errors[item] = 'missing'
-
-        if isinstance(self.request.POST.get('start_at'), unicode):
-            event.start_at = parse_datetime(self.request.POST.get('start_at'))
+        for item in ['start_at', 'end_at']:
+            request_setter(self.request.POST, event, item, False,
+                           lambda x: parse_datetime(x))
 
         if not event.start_at:
             errors['start_at'] = 'missing'
@@ -59,8 +67,6 @@ class EventHandler(webapp2.RequestHandler):
             if isinstance(self.request.POST.get('duration'), unicode):
                 event.end_at = event.start_at + \
                     timedelta(hours=float(self.request.POST.get('duration')))
-            elif isinstance(self.request.POST.get('end_at'), unicode):
-                event.end_at = parse_datetime(self.request.POST.get('end_at'))
 
             if not event.end_at:
                 errors['end_at'] = 'missing'
