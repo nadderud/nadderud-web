@@ -8,7 +8,7 @@ import webapp2
 from datetime import timedelta
 
 from google.appengine.ext import ndb
-from myapp.models import Unit, Event
+from myapp.models import Unit, Event, Article
 from myapp.dateparser import parse_datetime
 
 MY_KEYS = [
@@ -85,6 +85,9 @@ class EventHandler(webapp2.RequestHandler):
             if not template_values['event']:
                 self.abort(404)
                 return
+            elif template_values['event'].unit not in MY_KEYS:
+                self.abort(403)
+                return
         else:
             template_values = {
                 'title': 'Rediger terminliste',
@@ -102,6 +105,9 @@ class EventHandler(webapp2.RequestHandler):
             if not event:
                 self.abort(404)
                 return
+            elif event.unit not in MY_KEYS:
+                self.abort(403)
+                return
 
             if self.request.POST.get('commit') == 'delete':
                 event.key.delete()
@@ -117,7 +123,73 @@ class EventHandler(webapp2.RequestHandler):
             self.response.write('Success!')
 
 
+class ArticleHandler(webapp2.RequestHandler):
+    def upset_article(self, article):
+        """Sets request variables to article."""
+        errors = {}
+
+        errors.update(request_setter(self.request.POST, article, 'unit', True,
+                      lambda x: ndb.Key(urlsafe=x)))
+
+        errors.update(request_setter(self.request.POST, article, 'event',
+                      False, lambda x: ndb.Key(urlsafe=x)))
+
+        for item in ['title', 'author', 'description', 'body']:
+            errors.update(request_setter(self.request.POST, article, item,
+                                         True))
+
+        return article, errors
+
+    def get(self, articleId):
+        self.response.headers['Content-Type'] = 'text/html'
+        if articleId:  # edit
+            template_values = {
+                'title': 'Rediger artikkel',
+                'article':  Article.get_by_id(int(articleId)),
+                }
+            if not template_values['article']:
+                self.abort(404)
+                return
+            elif template_values['article'].unit not in MY_KEYS:
+                self.abort(403)
+                return
+        else:
+            template_values = {
+                'title': 'Rediger artikler',
+                'articles': Article.query_units(MY_KEYS).fetch(100)
+                }
+        template_values['units'] = MY_KEYS
+        template = JINJA_ENVIRONMENT.get_template('articles.html')
+        self.response.write(template.render(template_values))
+
+    def post(self, articleId):
+        self.response.headers['Content-Type'] = 'text/plain'
+        article = Article()
+        if articleId:
+            article = Article.get_by_id(int(articleId))
+            if not article:
+                self.abort(404)
+                return
+            elif article.unit not in MY_KEYS:
+                self.abort(403)
+                return
+
+            if self.request.POST.get('commit') == 'delete':
+                article.key.delete()
+                self.redirect('./')
+                return
+
+        article, errors = self.upset_article(article)
+
+        if len(errors) > 0:
+            self.response.write(errors)
+        else:
+            article.put()
+            self.response.write('Success!')
+
+
 app = webapp2.WSGIApplication([
     ('/', MainPage),
-    ('/terminliste/([0-9]*)', EventHandler)
+    ('/terminliste/([0-9]*)', EventHandler),
+    ('/artikler/([0-9]*)', ArticleHandler),
 ], debug=True)

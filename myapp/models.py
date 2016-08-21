@@ -57,6 +57,18 @@ class Article(ndb.Model):
     created_at = ndb.DateTimeProperty(auto_now_add=True)
     updated_at = ndb.DateTimeProperty(auto_now=True)
 
+    @classmethod
+    def query_unit(cls, unit_key):
+        keys = [unit_key]
+        while unit_key.parent():
+            unit_key = unit_key.parent()
+            keys += unit_key
+        return cls.query_units(keys)
+
+    @classmethod
+    def query_units(cls, keys):
+        return cls.query(cls.unit.IN(keys)).order(-cls.created_at)
+
 
 class Contact(ndb.Model):
     """Sub model for parents."""
