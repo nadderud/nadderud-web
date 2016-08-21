@@ -3,6 +3,13 @@
 from google.appengine.ext import ndb
 
 
+def semester_from_date(start_at):
+    semester = 'v'
+    if start_at.timetuple().tm_yday > 222:  # 10 Aug
+        semester = 'h'
+    return semester + start_at.strftime('%y')
+
+
 class Unit(ndb.Model):
     name = ndb.StringProperty(required=True, default="")
     active = ndb.BooleanProperty(required=True, default=True)
@@ -24,6 +31,8 @@ class Event(ndb.Model):
     unit = ndb.KeyProperty(required=True, kind=Unit)
     responsibility = ndb.StringProperty(required=True, default="")
     remark = ndb.StringProperty(required=True, default="")
+    semester = ndb.ComputedProperty(lambda self:
+                                    semester_from_date(self.start_at))
 
     @classmethod
     def query_unit(cls, unit_key):
