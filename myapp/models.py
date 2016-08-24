@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+from datetime import datetime, timedelta
 from google.appengine.ext import ndb
+
+from myapp import dateparser
 
 
 def semester_from_date(start_at):
@@ -8,6 +11,10 @@ def semester_from_date(start_at):
     if start_at.timetuple().tm_yday > 222:  # 10 Aug
         semester = 'h'
     return semester + start_at.strftime('%y')
+
+
+def strexist(str):
+    return isinstance(str, unicode)
 
 
 class Unit(ndb.Model):
@@ -46,6 +53,34 @@ class Event(ndb.Model):
     def query_units(cls, keys):
         return cls.query(cls.unit.IN(keys)).order(cls.start_at, cls.end_at)
 
+    def from_multidict(self, mdict):
+        if strexist(mdict.get('unit')):
+            self.unit = ndb.Key(urlsafe=mdict.get('unit'))
+        if strexist(mdict.get('event')):
+            self.event = ndb.Key(urlsafe=mdict.get('event'))
+        for item in ['name', 'location', 'responsibility', 'remark']:
+            if strexist(mdict.get(item)):
+                setattr(self, item, mdict.get(item))
+        for item in ['start_at', 'end_at']:
+            if strexist(mdict.get(item)):
+                setattr(self, item, dateparser.multiparse(mdict.get(item)))
+        if self.start_at and strexist(mdict.get('duration')):
+            self.end_at = self.start_at + \
+                timedelta(hours=float(mdict.get('duration')))
+
+    def validate(self):
+        errors = {}
+        for item in ['unit', 'name', 'location', 'start_at', 'end_at']:
+            if not getattr(self, item):
+                errors[item] = 'missing'
+            elif item in ['start_at', 'end_at']:
+                if not isinstance(getattr(self, item), datetime):
+                    errors[item] = 'invalid'
+        if ('start_at' not in errors) and ('end_at' not in errors):
+            if self.end_at < self.start_at:
+                errors['end_at'] = 'invalid'
+        return errors
+
 
 class Article(ndb.Model):
     title = ndb.StringProperty(required=True, default="")
@@ -68,6 +103,22 @@ class Article(ndb.Model):
     @classmethod
     def query_units(cls, keys):
         return cls.query(cls.unit.IN(keys)).order(-cls.created_at)
+
+    def from_multidict(self, mdict):
+        if strexist(mdict.get('unit')):
+            self.unit = ndb.Key(urlsafe=mdict.get('unit'))
+        if strexist(mdict.get('event')):
+            self.event = ndb.Key(urlsafe=mdict.get('event'))
+        for item in ['title', 'author', 'description', 'body']:
+            if strexist(mdict.get(item)):
+                setattr(self, item, mdict.get(item))
+
+    def validate(self):
+        errors = {}
+        for item in ['unit', 'title', 'author', 'description', 'body']:
+            if not getattr(self, item):
+                errors[item] = 'missing'
+        return errors
 
 
 class Contact(ndb.Model):

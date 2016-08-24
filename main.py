@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import webapp2
 
 from myapp.views import admin, manage
