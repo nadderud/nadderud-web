@@ -1,5 +1,7 @@
 import webapp2
 
+from myapp.views import admin, manage
+
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
@@ -8,4 +10,9 @@ class MainPage(webapp2.RequestHandler):
 
 app = webapp2.WSGIApplication([
     ('/nadderud/', MainPage),
+    ('/admin/', admin.MainPage),
+    ('/', manage.MainPage),
+    ('/terminliste/([0-9]*)', manage.EventHandler),
+    ('/artikler/([0-9]*)', manage.ArticleHandler),
+    ('/bilder/([0-9]*)', manage.ImageHandler),
 ], debug=True)

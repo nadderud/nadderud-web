@@ -19,7 +19,7 @@ MY_KEYS = [
 ]
 
 JINJA_ENVIRONMENT = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(os.path.dirname(__file__) + '/templates/'),
+    loader=jinja2.FileSystemLoader(os.path.dirname(__file__) + '/../templates/'),
     extensions=['jinja2.ext.autoescape'],
     autoescape=True)
 
@@ -188,8 +188,37 @@ class ArticleHandler(webapp2.RequestHandler):
             self.response.write('Success!')
 
 
-app = webapp2.WSGIApplication([
-    ('/', MainPage),
-    ('/terminliste/([0-9]*)', EventHandler),
-    ('/artikler/([0-9]*)', ArticleHandler),
-], debug=True)
+class ImageHandler(webapp2.RequestHandler):
+    def get(self):
+        self.response.headers['Content-Type'] = 'text/html'
+        template_values = {
+            'title': 'Bilder',
+            'images': []
+            }
+        template = JINJA_ENVIRONMENT.get_template('articles.html')
+        self.response.write(template.render(template_values))
+
+    def post(self, articleId):
+        self.response.headers['Content-Type'] = 'text/plain'
+        article = Article()
+        if articleId:
+            article = Article.get_by_id(int(articleId))
+            if not article:
+                self.abort(404)
+                return
+            elif article.unit not in MY_KEYS:
+                self.abort(403)
+                return
+
+            if self.request.POST.get('commit') == 'delete':
+                article.key.delete()
+                self.redirect('./')
+                return
+
+        article, errors = self.upset_article(article)
+
+        if len(errors) > 0:
+            self.response.write(errors)
+        else:
+            article.put()
+            self.response.write('Success!')
