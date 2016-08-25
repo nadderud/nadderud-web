@@ -1,25 +1,25 @@
 {% extends "layout.html" %}
 {% block body %}
-{% if article %}
+{% if item %}
 <h1>Rediger artikkel</h1>
 <form method="post">
   <div class="form-group">
     <label for="title">Tittel:</label>
-    <input type="text" name="title" class="form-control input-lg" required="true" value="{{ article.title }}" />
+    <input type="text" name="title" class="form-control input-lg" required="true" value="{{ item.title }}" />
   </div>
   <div class="form-group">
     <label for="description">Beskrivelse/ingress:</label>
-    <textarea name="description" class="form-control" required="true">{{ article.description }}</textarea>
+    <textarea name="description" class="form-control" required="true">{{ item.description }}</textarea>
   </div>
   <div class="form-group">
     <label for="body">Innhold:</label>
-    <textarea name="body" class="form-control" required="true">{{ article.body }}</textarea>
+    <textarea name="body" class="form-control" required="true">{{ item.body }}</textarea>
   </div>
   <div class="row">
     <div class="col-md-4">
       <div class="form-group">
         <label for="author">Forfatter:</label>
-        <input type="text" name="author" class="form-control" required="true" value="{{ article.author }}" />
+        <input type="text" name="author" class="form-control" required="true" value="{{ item.author }}" />
       </div>
     </div>
     <div class="col-md-4">
@@ -27,7 +27,7 @@
         <label for="unit">Enhet:</label>
         <select name="unit" class="form-control">
           {% for unit in units %}
-            <option value="{{unit.urlsafe()}}"{% if unit == article.unit %} selected{% endif %}>
+            <option value="{{unit.urlsafe()}}"{% if unit == item.unit %} selected{% endif %}>
               {% if unit.parent() %}
                 {% for item in unit.pairs()[1:] %}
                   {% if item != unit.pairs()[1:][0] %} / {% endif %}
@@ -62,15 +62,15 @@
     </tr>
   </thead>
   <tbody>
-    {% for article in articles %}
+    {% for item in items %}
     <tr>
-      <td>{{ article.unit.string_id().capitalize() }}</td>
+      <td>{{ item.unit.string_id().capitalize() }}</td>
       <td>
-        <strong><a href="{{ article.key.integer_id() }}">{{ article.title }}</a></strong>
+        <strong><a href="{{ item.key.integer_id() }}">{{ item.title }}</a></strong>
         <br>
-        <small>{{ article.description }}</small>
+        <small>{{ item.description }}</small>
       </td>
-      <td>{{ article.created_at }}</td>
+      <td>{{ item.created_at }}</td>
     </tr>
     {% endfor %}
   </tbody>

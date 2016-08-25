@@ -1,37 +1,37 @@
 {% extends "layout.html" %}
 {% block body %}
-{% if event %}
+{% if item %}
 <h1>Rediger hendelse</h1>
 <form method="post">
   <div class="row">
     <div class="col-md-4">
       <div class="form-group">
         <label for="start_at">Start:</label>
-        <input type="datetime-local" name="start_at" class="form-control" required="true" value="{{ event.start_at.isoformat('T') }}" />
+        <input type="datetime-local" name="start_at" class="form-control" required="true" value="{{ item.start_at.isoformat('T') }}" />
       </div>
       <div class="form-group">
         <label for="end_at">Slutt:</label>
-        <input type="datetime-local" name="end_at" class="form-control" required="true" value="{{ event.end_at.isoformat('T') }}" />
+        <input type="datetime-local" name="end_at" class="form-control" required="true" value="{{ item.end_at.isoformat('T') }}" />
       </div>
     </div>
     <div class="col-md-4">
       <div class="form-group">
         <label for="name">Tema:</label>
-        <input type="text" maxlength="150" name="name" class="form-control" required="true" value="{{ event.name }}" />
+        <input type="text" maxlength="150" name="name" class="form-control" required="true" value="{{ item.name }}" />
       </div>
       <div class="form-group">
         <label for="location">Sted:</label>
-        <input type="text" maxlength="150" name="location" class="form-control" value="{{ event.location }}" />
+        <input type="text" maxlength="150" name="location" class="form-control" value="{{ item.location }}" />
       </div>
     </div>
     <div class="col-md-4">
       <div class="form-group">
         <label for="responsibility">Ansvarlig:</label>
-        <input type="text" maxlength="150" name="responsibility" class="form-control" value="{{ event.responsibility }}" />
+        <input type="text" maxlength="150" name="responsibility" class="form-control" value="{{ item.responsibility }}" />
       </div>
       <div class="form-group">
         <label for="remark">Merknad:</label>
-        <input type="text" maxlength="150" name="remark" class="form-control" value="{{ event.remark }}" />
+        <input type="text" maxlength="150" name="remark" class="form-control" value="{{ item.remark }}" />
       </div>
     </div>
     <div class="col-md-8">
@@ -39,7 +39,7 @@
         <label for="unit">Enhet:</label>
         <select name="unit" class="form-control">
           {% for unit in units %}
-            <option value="{{unit.urlsafe()}}"{% if unit == event.unit %} selected{% endif %}>
+            <option value="{{unit.urlsafe()}}"{% if unit == item.unit %} selected{% endif %}>
               {% if unit.parent() %}
                 {% for item in unit.pairs()[1:] %}
                   {% if item != unit.pairs()[1:][0] %} / {% endif %}
@@ -77,14 +77,14 @@
     </tr>
   </thead>
   <tbody>
-    {% for event in events %}
+    {% for item in items %}
     <tr>
-      <td>{{ event.unit.string_id().capitalize() }}</td>
-      <td>{{ event.start_at }} - {{ event.end_at}}</td>
-      <td><a href="{{ event.key.integer_id() }}">{{ event.name }}</a></td>
-      <td>{{ event.location }}</td>
-      <td>{{ event.responsibility }}</td>
-      <td>{{ event.remark }}</td>
+      <td>{{ item.unit.string_id().capitalize() }}</td>
+      <td>{{ item.start_at }} - {{ item.end_at}}</td>
+      <td><a href="{{ item.key.integer_id() }}">{{ item.name }}</a></td>
+      <td>{{ item.location }}</td>
+      <td>{{ item.responsibility }}</td>
+      <td>{{ item.remark }}</td>
     </tr>
     {% endfor %}
   </tbody>

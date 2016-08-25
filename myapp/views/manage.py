@@ -14,23 +14,49 @@ MY_KEYS = [
 
 
 class BaseHandler(webapp2.RequestHandler):
-    def can_i_edit(self, instance):
-        if not instance:
+    def authorize(self, item):
+        if not item:
             self.abort(404)
             return
-        elif getattr(instance, 'unit') not in MY_KEYS:
+        elif getattr(item, 'unit') not in MY_KEYS:
             self.abort(403)
             return
 
-    def put_success(self, instance, target):
+    def get(self, itemId):
+        if itemId:
+            template_values = {
+                'item':  self.klass.get_by_id(int(itemId)),
+                }
+            self.authorize(template_values['item'])
+        else:
+            template_values = {
+                'items': self.klass.query_units(MY_KEYS).fetch(100)
+                }
+        template_values['units'] = MY_KEYS
+        template = JINJA_ENVIRONMENT.get_template(self.template_file)
+        self.response.headers['Content-Type'] = 'text/html'
+        self.response.write(template.render(template_values))
+
+    def post(self, itemId):
+        if itemId:
+            item = self.klass.get_by_id(int(itemId))
+            self.authorize(item)
+            if self.request.POST.get('commit') == 'delete':
+                item.key.delete()
+                self.redirect('./')
+                return
+        else:
+            item = self.klass()
+
+        item.from_multidict(self.request.POST)
         self.response.headers['Content-Type'] = 'text/plain'
-        errors = instance.validate()
+        errors = item.validate()
         if len(errors) > 0:
             self.response.write(errors)
         else:
-            instance.put()
+            item.put()
             self.response.write('Success!')
-            self.redirect(target)
+            self.redirect(self.collection_path)
 
 
 class MainPage(webapp2.RequestHandler):
@@ -40,70 +66,15 @@ class MainPage(webapp2.RequestHandler):
 
 
 class EventHandler(BaseHandler):
-    def get(self, eventId):
-        self.response.headers['Content-Type'] = 'text/html'
-        if eventId:  # edit
-            template_values = {
-                'title': 'Rediger hendelse',
-                'event':  Event.get_by_id(int(eventId)),
-                }
-            self.can_i_edit(template_values['event'])
-        else:
-            template_values = {
-                'title': 'Rediger terminliste',
-                'events': Event.query_units(MY_KEYS).fetch(100)
-                }
-        template_values['units'] = MY_KEYS
-        template = JINJA_ENVIRONMENT.get_template('events.html')
-        self.response.write(template.render(template_values))
-
-    def post(self, eventId):
-        event = Event()
-        if eventId:
-            event = Event.get_by_id(int(eventId))
-            self.can_i_edit(event)
-
-            if self.request.POST.get('commit') == 'delete':
-                event.key.delete()
-                self.redirect('./')
-                return
-
-        event.from_multidict(self.request.POST)
-        self.put_success(event, '/terminliste/')
+    collection_path = '/terminliste/'
+    klass = Event
+    template_file = 'events.html'
 
 
 class ArticleHandler(BaseHandler):
-    def get(self, articleId):
-        self.response.headers['Content-Type'] = 'text/html'
-        if articleId:  # edit
-            template_values = {
-                'title': 'Rediger artikkel',
-                'article':  Article.get_by_id(int(articleId)),
-                }
-            self.can_i_edit(template_values['article'])
-        else:
-            template_values = {
-                'title': 'Rediger artikler',
-                'articles': Article.query_units(MY_KEYS).fetch(100)
-                }
-        template_values['units'] = MY_KEYS
-        template = JINJA_ENVIRONMENT.get_template('articles.html')
-        self.response.write(template.render(template_values))
-
-    def post(self, articleId):
-        self.response.headers['Content-Type'] = 'text/plain'
-        article = Article()
-        if articleId:
-            article = Article.get_by_id(int(articleId))
-            self.can_i_edit(article)
-
-            if self.request.POST.get('commit') == 'delete':
-                article.key.delete()
-                self.redirect('./')
-                return
-
-        article.from_multidict(self.request.POST)
-        self.put_success(article, '/artikler/')
+    collection_path = '/artikler/'
+    klass = Article
+    template_file = 'articles.html'
 
 
 class ImageHandler(webapp2.RequestHandler):
