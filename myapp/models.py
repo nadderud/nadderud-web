@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from google.appengine.ext import ndb
 
 from myapp import dateparser
@@ -13,8 +13,32 @@ def semester_from_date(start_at):
     return semester + start_at.strftime('%y')
 
 
+def convert_by_name(value_name, value):
+    if value_name in ['start_at', 'end_at']:
+        return dateparser.multiparse(value)
+    elif value_name in ['unit', 'event']:
+        return ndb.Key(urlsafe=value)
+    else:
+        return value
+
+
 def strexist(str):
     return isinstance(str, unicode)
+
+
+def assign_if_present(target, value_name, value):
+    if strexist(value):
+        setattr(target, value_name, convert_by_name(value_name, value))
+
+
+class Assignable(ndb.Model):
+    @classmethod
+    def query_unit(cls, unit_key):
+        keys = [unit_key]
+        while unit_key.parent():
+            unit_key = unit_key.parent()
+            keys += unit_key
+        return cls.query_units(keys)
 
 
 class Unit(ndb.Model):
@@ -30,7 +54,7 @@ class Unit(ndb.Model):
         return ndb.Key(*key_chain)
 
 
-class Event(ndb.Model):
+class Event(Assignable):
     name = ndb.StringProperty(required=True, default="")
     location = ndb.StringProperty(required=True, default="")
     start_at = ndb.DateTimeProperty(required=True)
@@ -41,29 +65,21 @@ class Event(ndb.Model):
     semester = ndb.ComputedProperty(lambda self:
                                     semester_from_date(self.start_at))
 
-    @classmethod
-    def query_unit(cls, unit_key):
-        keys = [unit_key]
-        while unit_key.parent():
-            unit_key = unit_key.parent()
-            keys += unit_key
-        return cls.query_units(keys)
+    @property
+    def positive_duration(self):
+        if self.start_at and self.end_at:
+            return self.start_at <= self.end_at
+        else:
+            return False
 
     @classmethod
     def query_units(cls, keys):
         return cls.query(cls.unit.IN(keys)).order(cls.start_at, cls.end_at)
 
     def from_multidict(self, mdict):
-        if strexist(mdict.get('unit')):
-            self.unit = ndb.Key(urlsafe=mdict.get('unit'))
-        if strexist(mdict.get('event')):
-            self.event = ndb.Key(urlsafe=mdict.get('event'))
-        for item in ['name', 'location', 'responsibility', 'remark']:
-            if strexist(mdict.get(item)):
-                setattr(self, item, mdict.get(item))
-        for item in ['start_at', 'end_at']:
-            if strexist(mdict.get(item)):
-                setattr(self, item, dateparser.multiparse(mdict.get(item)))
+        for item in ['unit', 'event', 'start_at', 'end_at', 'name', 'location',
+                     'responsibility', 'remark']:
+            assign_if_present(self, item, mdict.get(item))
         if self.start_at and strexist(mdict.get('duration')):
             self.end_at = self.start_at + \
                 timedelta(hours=float(mdict.get('duration')))
@@ -73,16 +89,12 @@ class Event(ndb.Model):
         for item in ['unit', 'name', 'location', 'start_at', 'end_at']:
             if not getattr(self, item):
                 errors[item] = 'missing'
-            elif item in ['start_at', 'end_at']:
-                if not isinstance(getattr(self, item), datetime):
-                    errors[item] = 'invalid'
-        if ('start_at' not in errors) and ('end_at' not in errors):
-            if self.end_at < self.start_at:
-                errors['end_at'] = 'invalid'
+        if not self.positive_duration:
+            errors['end_at'] = 'invalid'
         return errors
 
 
-class Article(ndb.Model):
+class Article(Assignable):
     title = ndb.StringProperty(required=True, default="")
     author = ndb.StringProperty(required=True, default="")
     description = ndb.StringProperty(required=True, default="")
@@ -93,25 +105,13 @@ class Article(ndb.Model):
     updated_at = ndb.DateTimeProperty(auto_now=True)
 
     @classmethod
-    def query_unit(cls, unit_key):
-        keys = [unit_key]
-        while unit_key.parent():
-            unit_key = unit_key.parent()
-            keys += unit_key
-        return cls.query_units(keys)
-
-    @classmethod
     def query_units(cls, keys):
         return cls.query(cls.unit.IN(keys)).order(-cls.created_at)
 
     def from_multidict(self, mdict):
-        if strexist(mdict.get('unit')):
-            self.unit = ndb.Key(urlsafe=mdict.get('unit'))
-        if strexist(mdict.get('event')):
-            self.event = ndb.Key(urlsafe=mdict.get('event'))
-        for item in ['title', 'author', 'description', 'body']:
-            if strexist(mdict.get(item)):
-                setattr(self, item, mdict.get(item))
+        for item in ['unit', 'event', 'title', 'author', 'description',
+                     'body']:
+            assign_if_present(self, item, mdict.get(item))
 
     def validate(self):
         errors = {}
