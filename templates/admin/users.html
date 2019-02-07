@@ -1,0 +1,93 @@
+{% extends "admin/layout.html" %} {% block body %}
+<h1>Brukeradministrasjon</h1>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Bruker</th>
+      <th>Rolle</th>
+      <th>Skop</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for grant in grants %}
+    <tr>
+      <th scope="row">
+        <span
+          title="{{
+            grant.key
+              .parent()
+              .parent()
+              .id()
+          }}"
+          >{{ grant.email }}</span
+        >
+      </th>
+      <td>{{ grant.key.parent().id() }}</td>
+      <td>{{ grant.key.id() }}</td>
+      <td>
+        <form method="POST">
+          <input type="hidden" name="key" value="{{ grant.key.urlsafe() }}" />
+          <button
+            type="submit"
+            name="verb"
+            value="delete"
+            class="btn btn-danger"
+          >
+            Slett
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <form method="POST">
+      <tr>
+        <td>
+          <label for="user">Brukernavn (e-post)</label>
+          <input
+            type="email"
+            id="user"
+            name="user"
+            placeholder="test@eksempel.no"
+            class="form-control"
+            required
+          />
+        </td>
+        <td>
+          <label for="role">Rolle</label>
+          <select id="role" name="role" class="form-control" required
+            ><option></option>
+            {% for role in roles %}
+            <option>{{ role }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td>
+          <label for="scope">Skop (enhet/patrulje)</label>
+          <input
+            type="text"
+            id="scope"
+            name="scope"
+            placeholder="flokken/*"
+            class="form-control"
+            required
+          />
+        </td>
+        <td style="vertical-align: bottom">
+          <button
+            type="submit"
+            name="verb"
+            value="post"
+            class="btn btn-primary"
+          >
+            Legg til
+          </button>
+        </td>
+      </tr>
+    </form>
+  </tfoot>
+</table>
+{% endblock %}

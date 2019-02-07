@@ -1,0 +1,110 @@
+{% extends "admin/layout.html" %} {% block body %}
+<h1>Send e-post</h1>
+<form method="POST" action="./">
+  <div class="row">
+    <div class="col-md-7">
+      <div class="form-group">
+        <label for="subject">Emne</label>
+        <input
+          type="text"
+          class="form-control"
+          id="subject"
+          name="subject"
+          placeholder="Emne på e-postmeldingen"
+          required
+        />
+      </div>
+      <div class="form-group">
+        <label for="message">Melding</label>
+        <textarea
+          class="form-control"
+          id="message"
+          name="message"
+          required
+          rows="20"
+          placeholder="Til alle speidere (eksempel)
+
+Dette er en overskrift
+======================
+Dette vil bli en fin melding, som kan leses av deg. Vi formaterer den automatisk, så den ser pen ut hos alle som får den.
+
+Husk å pakke:
+
+* Stein
+* Saks
+* Papir
+
+Hilsen Baden-Powell"
+        ></textarea>
+      </div>
+    </div>
+    <div class="col-md-5">
+      <fieldset class="form-group">
+        <legend>Mottakere</legend>
+        <ul class="list-unstyled">
+          {% for unit in units %}
+          <li class="unitSelector">
+            <div class="mt-2">
+              <label class="unitSelectAll"
+                ><strong> {{ unit }}</strong></label
+              >
+              <button
+                class="btn btn-light btn-sm dropdown-toggle"
+                type="button"
+                data-toggle="collapse"
+                data-target="#unit-{{ loop.index }}"
+              >
+                Vis
+              </button>
+            </div>
+            <ul class="list-unstyled pl-4 collapse" id="unit-{{ loop.index }}">
+              {% for member in members[unit] %}
+              <li>
+                <label>
+                  <input type="checkbox" name="email" value="{{
+                    ",".join(member.epost)
+                  }}" /> {{ member.navn }}
+                </label>
+              </li>
+              {% endfor %}
+            </ul>
+          </li>
+          {% endfor %}
+        </ul>
+      </fieldset>
+      <button type="submit" class="btn btn-success">Send e-post</button>
+    </div>
+  </div>
+</form>
+{% endblock %} {% block injectjs%}
+<script type="text/javascript">
+  $(function() {
+    function updateSelectCounter($unit, $counter, $checker) {
+      var checks = $unit.find('input[type="checkbox"]:not(.checkall)');
+      var checked = checks.filter(":checked").length;
+      $counter.text(" (" + checked + "/" + checks.length + ")");
+      $checker.prop("checked", checks.length === checked);
+    }
+    function selectAll($unit, value) {
+      $unit.find('input[type="checkbox"]').prop("checked", value);
+    }
+    $(".unitSelector").each(function() {
+      var $me = $(this);
+      var $counter = $('<small class="text-muted" />');
+      var $checker = $('<input type="checkbox" class="checkall" />');
+      var $chekcers = $me.find('input[type="checkbox"]:not(.checkall)');
+      $me
+        .find(".unitSelectAll")
+        .prepend($checker)
+        .append($counter);
+      updateSelectCounter($me, $counter, $checker);
+      $checker.change(function(e) {
+        selectAll($me, e.target.checked);
+      });
+      $me.find('input[type="checkbox"]').change(function() {
+        updateSelectCounter($me, $counter, $checker);
+      });
+    });
+  });
+</script>
+{% endblock %}
